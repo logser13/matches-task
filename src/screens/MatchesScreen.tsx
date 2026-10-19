@@ -6,6 +6,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { MATCHES_URL } from '../config';
@@ -32,6 +33,7 @@ export function MatchesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
+  const [query, setQuery] = useState('');
   const { isFavorite, toggle } = useFavorites();
 
   const load = useCallback(async (isRefresh = false) => {
@@ -63,13 +65,20 @@ export function MatchesScreen() {
 
   const visible = useMemo(() => {
     if (!matches) return [];
-    return matches.filter((match) => {
+    const byFilter = matches.filter((match) => {
       if (filter === 'all') return true;
       if (filter === 'finished') return isFinished(match);
       // «Предстоящие» — всё незавершённое: scheduled, live и postponed.
       return !isFinished(match);
     });
-  }, [matches, filter]);
+    const text = query.trim().toLowerCase();
+    if (!text) return byFilter;
+    return byFilter.filter(
+      (match) =>
+        match.home.name.toLowerCase().includes(text) ||
+        match.away.name.toLowerCase().includes(text),
+    );
+  }, [matches, filter, query]);
 
   if (loading) {
     return (
@@ -104,6 +113,16 @@ export function MatchesScreen() {
         {round !== null && <Text style={styles.round}>Тур {round}</Text>}
       </View>
 
+      <TextInput
+        style={styles.search}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Поиск по названию клуба"
+        autoCorrect={false}
+        autoCapitalize="none"
+        accessibilityLabel="Поиск по названию клуба"
+      />
+
       <View style={styles.filters}>
         {FILTERS.map((item) => {
           const active = filter === item.key;
@@ -132,7 +151,7 @@ export function MatchesScreen() {
           <Text style={styles.hint}>
             {matches && matches.length === 0
               ? 'В этом туре матчей пока нет.'
-              : 'Ничего не найдено — попробуйте другой фильтр.'}
+              : 'Ничего не найдено — измените фильтр или поисковый запрос.'}
           </Text>
         </View>
       ) : (
@@ -178,6 +197,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 8,
+  },
+  search: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#111827',
+    marginBottom: 10,
   },
   chip: {
     paddingVertical: 6,
